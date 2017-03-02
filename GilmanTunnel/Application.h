@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ApplicationConstants.h"
+#include <SDL_opengl.h>
 
 struct IKinectSensor;
 struct IColorFrameReader;
@@ -23,4 +24,6 @@ private:
 	IColorFrameReader* m_reader;		// Kinect color data source
 	bool m_running;						// Denotes prepared instance of Application
 	Window* m_window;					// Window context
+	Texture* m_texture;					// Current texture being rendered
+	void* m_context;			// GL's context
 };

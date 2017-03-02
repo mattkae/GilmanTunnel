@@ -19,9 +19,25 @@ using namespace std; // For error reporting.
 */
 Application::Application(unsigned int width, unsigned int height) 
 {
-	SDL_Init(SDL_INIT_VIDEO);
-	this->m_window = new Window(width, height);
+	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+		cerr << "APPLICATION::SDL_INIT:: " << SDL_GetError() << endl;
+		exit(EXIT_FAILURE);
+	}
 
+	// Setup OpenGL
+	glClearColor(0, 0, 0, 0);
+	glClearDepth(1.0f);
+	glEnable(GL_TEXTURE_2D);
+	// Camera setup
+	glViewport(0, 0, width, height);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, width, height, 0, 1, -1);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	this->m_window = new Window(width, height);
+	this->m_context = this->m_window->SetContext();
 	this->m_running = initializeKinect();
 }
 
@@ -30,6 +46,8 @@ Application::Application(unsigned int width, unsigned int height)
 */
 Application::~Application() 
 {
+	SDL_GL_DeleteContext(this->m_context);
+
 	if (this->m_sensor) {
 		this->m_sensor->Close();
 		this->m_sensor = NULL;
@@ -40,7 +58,7 @@ Application::~Application()
 		this->m_window->Free();
 		delete this->m_window;
 	}
-
+	
 	SDL_Quit();
 }
 
@@ -86,7 +104,8 @@ bool Application::initializeKinect()
 */
 void Application::Run() 
 {
-	Uint32 currentTime, lastTime = 0, elapsed, lag = 0;
+	Uint32 currentTime, lastTime = 0, elapsed;
+	float lag = 0;
 	SDL_Event e;
 
 	while (this->m_running) {
@@ -104,10 +123,13 @@ void Application::Run()
 
 		while (lag >= ApplicationConstants::OptimalTime_) {
 			// Run Updates
-			lag -= ApplicationConstants::OptimalTime_;
+
+			lag -= (Uint32) ApplicationConstants::OptimalTime_;
 		}
 
 		// Render...
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		SDL_GL_SwapWindow(this->m_window->GetWindow());
 	}
 }
 
@@ -123,7 +145,7 @@ bool Application::GetRunning() {
 void Application::getKinectData(Texture* texture) {
 	IColorFrame* frame = NULL;
 	if (SUCCEEDED(this->m_reader->AcquireLatestFrame(&frame))) {
-		//frame->CopyConvertedFrameDataToArray(this->m_window->GetWidth() * this->m_window->GetHeight() * 4, texture->data, ColorImageFormat_Bgra);
+		frame->CopyConvertedFrameDataToArray(this->m_window->GetWidth() * this->m_window->GetHeight() * 4, texture->data, ColorImageFormat_Bgra);
 	}
 	if (frame) frame->Release();
 }

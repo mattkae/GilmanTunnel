@@ -12,7 +12,7 @@ using namespace std;
 	@param height - height of window
 	@param name - title of window
 */
-Window::Window(GLuint width, GLuint height, const char* name) 
+Window::Window(GLuint width, GLuint height, const GLchar* name) 
 {
 	this->m_width = width;
 	this->m_height = height;
@@ -37,6 +37,13 @@ void Window::Free()
 }
 
 /*
+	Make GL context.
+*/
+void* Window::SetContext() {
+	return SDL_GL_CreateContext(this->m_window);
+}
+
+/*
 	@return width of context
 */
 GLuint Window::GetWidth() 
@@ -50,4 +57,11 @@ GLuint Window::GetWidth()
 GLuint Window::GetHeight()
 {
 	return this->m_height;
+}
+
+/*
+	@return the window
+*/
+SDL_Window* Window::GetWindow() {
+	return this->m_window;
 }
