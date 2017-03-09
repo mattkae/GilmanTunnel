@@ -19,8 +19,21 @@ using namespace std; // For error reporting.
 */
 Application::Application(unsigned int width, unsigned int height) 
 {
+	// Setup SDL2
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
 		cerr << "APPLICATION::SDL_INIT:: " << SDL_GetError() << endl;
+		exit(EXIT_FAILURE);
+	}
+
+	// Initialize window & Kinect
+	this->m_window = new Window(width, height);
+	this->m_context = this->m_window->SetContext();
+	this->m_running = initializeKinect();
+
+	// Setup GLEW
+	glewExperimental = GL_TRUE;
+	if (glewInit() != GLEW_OK) {
+		cerr << "APPLICATION::GLEW_INIT:: " << "Glew failed to initialize." << endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -28,7 +41,6 @@ Application::Application(unsigned int width, unsigned int height)
 	glClearColor(0, 0, 0, 0);
 	glClearDepth(1.0f);
 	glEnable(GL_TEXTURE_2D);
-	// Camera setup
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -36,9 +48,8 @@ Application::Application(unsigned int width, unsigned int height)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	this->m_window = new Window(width, height);
-	this->m_context = this->m_window->SetContext();
-	this->m_running = initializeKinect();
+	// Initialize texture
+	this->m_texture = new Texture();
 }
 
 /*
@@ -123,12 +134,14 @@ void Application::Run()
 
 		while (lag >= ApplicationConstants::OptimalTime_) {
 			// Run Updates
-
+			this->getKinectData(this->m_texture);
 			lag -= (Uint32) ApplicationConstants::OptimalTime_;
 		}
 
 		// Render...
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		this->m_texture->Render();
 		SDL_GL_SwapWindow(this->m_window->GetWindow());
 	}
 }
@@ -145,7 +158,7 @@ bool Application::GetRunning() {
 void Application::getKinectData(Texture* texture) {
 	IColorFrame* frame = NULL;
 	if (SUCCEEDED(this->m_reader->AcquireLatestFrame(&frame))) {
-		frame->CopyConvertedFrameDataToArray(this->m_window->GetWidth() * this->m_window->GetHeight() * 4, texture->data, ColorImageFormat_Bgra);
+		frame->CopyConvertedFrameDataToArray(this->m_window->GetWidth() * this->m_window->GetHeight() * 4, ((GLubyte*)texture->data), ColorImageFormat_Bgra);
 	}
 	if (frame) frame->Release();
 }

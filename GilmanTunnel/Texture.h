@@ -1,15 +1,23 @@
 #pragma once
 #include "ApplicationConstants.h"
-#include <SDL_opengl.h>
+#if !__APPLE__
+#define GLEW_STATIC
+#endif
+
+class Shader;
 
 class Texture {
 public:
 	Texture();
 	~Texture();
 	void ClearData();
+	void Render();
 
-	GLubyte* data;
+	void* data;
 private:
-	GLuint m_textureId;		// ID of texture
-	GLuint m_fbo;			// Frame buffer object
+	unsigned int m_textureId;		// ID of texture
+	unsigned int m_vao;				// VAO
+	unsigned int m_vbo;				// Vertex buffer onject
+	unsigned int m_ebo;				// Element buffer object
+	Shader* m_shader;
 };
