@@ -71,7 +71,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);C:\SDL2\include</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(KINECTSDK20_DIR)inc;C:\SDL2\include</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -89,8 +89,8 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(KINECTSDK20_DIR)inc;C:\SDL2\include</AdditionalIncludeDirectories>
-      <AdditionalUsingDirectories>$(KINECTSDK20_DIR);C:\SDL2\</AdditionalUsingDirectories>
+      <AdditionalIncludeDirectories>$(KINECTSDK20_DIR)inc;C:\SDL2\include;C:\glew\include</AdditionalIncludeDirectories>
+      <AdditionalUsingDirectories>$(KINECTSDK20_DIR);C:\SDL2\;C:\glew</AdditionalUsingDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
