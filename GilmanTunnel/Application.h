@@ -27,5 +27,5 @@ private:
 	bool m_running;						// Denotes prepared instance of Application
 	Window* m_window;					// Window context
 	Texture* m_texture;					// Current texture being rendered
-	void* m_context;			// GL's context
+	void* m_context;					// GL's context
 };
