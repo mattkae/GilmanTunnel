@@ -9,10 +9,15 @@
 #include "Texture.h"
 #include "Window.h"
 #include <SDL.h>
-#include <Kinect.h>
 #include <iostream>
+#ifdef KINECT18
+#include <NuiImageCamera.h>
+#else
+#include <Kinect.h>
+#endif
 
 using namespace std; // For error reporting.
+
 
 /**
 	Default constructor to initialize the application instance.
@@ -21,7 +26,7 @@ Application::Application(unsigned int width, unsigned int height)
 {
 	// Setup SDL2
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-		cerr << "APPLICATION::SDL_INIT:: " << SDL_GetError() << endl;
+		std::cerr << "APPLICATION::SDL_INIT:: " << SDL_GetError() << endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -30,10 +35,15 @@ Application::Application(unsigned int width, unsigned int height)
 	this->m_context = this->m_window->SetContext();
 	this->m_running = initializeKinect();
 
+	if (!this->m_running) {
+		system("pause");
+		exit(EXIT_FAILURE);
+	}
+
 	// Setup GLEW
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK) {
-		cerr << "APPLICATION::GLEW_INIT:: " << "Glew failed to initialize." << endl;
+		std::cerr << "APPLICATION::GLEW_INIT:: " << "Glew failed to initialize." << endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -59,10 +69,20 @@ Application::~Application()
 {
 	SDL_GL_DeleteContext(this->m_context);
 
+	delete[] this->m_depthData;
+
+#ifdef KINECT18
+	if (this->m_sensor) {
+		this->m_sensor->NuiShutdown();
+		this->m_sensor->Release();
+	}
+#else
+	// Close the sensor
 	if (this->m_sensor) {
 		this->m_sensor->Close();
 		this->m_sensor = NULL;
 	}
+#endif
 
 	// Free window memory
 	if (this->m_window) {
@@ -83,11 +103,54 @@ Application::Application(Application& other)
 
 /*
 	Initialize the Kinect sensor and prepare to read data from it.
+	This works even without a Kinect connected.
 
 	@return succesful initialization.
 */
 bool Application::initializeKinect()
 {
+#ifdef KINECT18
+	// Retrieve the number of sensors
+	int numSensors = 0;
+	HRESULT hr = NuiGetSensorCount(&numSensors);
+	if (hr < 0) {
+		std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to retrieve sensor count" << endl;
+		return false;
+	}
+
+	if (numSensors == 0) {
+		std::cerr << "ERROR::INITIALIZE_KINECT:: No sensors available" << endl;
+		return false;
+	}
+
+	// Create a new sensor
+	for (int sensorIndex = 0; sensorIndex < numSensors; sensorIndex++) {
+		if (NuiCreateSensorByIndex(0, &this->m_sensor) != S_OK) {
+			std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to create sensor" << endl;
+			return false;
+		}
+	}
+
+	// Initialize new sensor
+	if (this->m_sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH | NUI_INITIALIZE_FLAG_USES_COLOR) != S_OK) {
+		std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to initialize NUI" << endl;
+		return false;
+	}
+	this->m_sensor->NuiImageStreamOpen(
+		NUI_IMAGE_TYPE_DEPTH,
+		NUI_IMAGE_RESOLUTION_1280x960,
+		NUI_IMAGE_DEPTH_MAXIMUM,
+		NUI_IMAGE_STREAM_FRAME_LIMIT_MAXIMUM,
+		NULL,
+		this->m_depthStream
+	);
+
+	if (this->m_sensor->NuiStatus() != S_OK) {
+		std::cerr << "ERROR::INITIALIZE_KINECT:: Sensor status not ok" << endl;
+		return false;
+	}
+
+#else
 	if (FAILED(GetDefaultKinectSensor(&this->m_sensor))) {
 		cerr << "ERROR::INITIALIZE_KINECT:: Unable to initialize sensor" << endl;
 		return false;
@@ -96,17 +159,35 @@ bool Application::initializeKinect()
 	if (this->m_sensor) {
 		this->m_sensor->Open();
 
-		IColorFrameSource* frameSource = NULL;
-		this->m_sensor->get_ColorFrameSource(&frameSource);
-		frameSource->OpenReader(&this->m_reader);
-		if (frameSource) {
-			frameSource->Release();
-			frameSource = NULL;
+		// Color source
+		IColorFrameSource* colorFrameSource = nullptr;
+		this->m_sensor->get_ColorFrameSource(&colorFrameSource);
+		colorFrameSource->OpenReader(&this->m_colorReader);
+		if (colorFrameSource) {
+			colorFrameSource->Release();
+			colorFrameSource = NULL;
 		}
+
+		// Depth source
+		IDepthFrameSource* depthFrameSource = nullptr;
+		this->m_sensor->get_DepthFrameSource(&depthFrameSource);
+		depthFrameSource->OpenReader(&this->m_depthReader);
+		// Initialize depth dimensions
+		IFrameDescription* frameDescription = nullptr;
+		depthFrameSource->get_FrameDescription(&frameDescription);
+		frameDescription->get_Width(&this->m_depthWidth);
+		frameDescription->get_Height(&this->m_depthHeight);
+		this->m_depthData = new uint16_t[this->m_depthWidth * this->m_depthHeight];
+		if (depthFrameSource) {
+			depthFrameSource->Release();
+			depthFrameSource = NULL;
+		}
+
 		return true;
 	}
+#endif
 
-	cerr << "ERROR::INITIAILIZE_KINECT:: m_sensor was null" << endl;
+	std::cerr << "ERROR::INITIAILIZE_KINECT:: m_sensor was null" << endl;
 	return false;
 }
 
@@ -139,9 +220,8 @@ void Application::Run()
 		}
 
 		// Render...
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		this->m_texture->Render();
+		//this->m_texture->Render();
 		SDL_GL_SwapWindow(this->m_window->GetWindow());
 	}
 }
@@ -156,9 +236,23 @@ bool Application::GetRunning() {
 }
 
 void Application::getKinectData(Texture* texture) {
+#ifdef KINECT18
+
+#else
+	IDepthFrame* depthFrame = nullptr;
+	if (SUCCEEDED(this->m_depthReader->AcquireLatestFrame(&depthFrame))) {
+		depthFrame->CopyFrameDataToArray(this->m_depthWidth * this->m_depthHeight, this->m_depthData);
+	}
+	// Acquire the color data (you can do this similarly with the whatever reader that you want)
 	IColorFrame* frame = NULL;
-	if (SUCCEEDED(this->m_reader->AcquireLatestFrame(&frame))) {
+
+	// The program is running way faster than the Kinect can output frames, so you must
+	// not read the data if it isn't provided.
+	if (SUCCEEDED(this->m_colorReader->AcquireLatestFrame(&frame))) {
 		frame->CopyConvertedFrameDataToArray(this->m_window->GetWidth() * this->m_window->GetHeight() * 4, ((GLubyte*)texture->data), ColorImageFormat_Bgra);
 	}
-	if (frame) frame->Release();
+	if (frame) {
+		frame->Release();
+	}
+#endif
 }
