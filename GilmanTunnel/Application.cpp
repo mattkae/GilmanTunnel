@@ -36,9 +36,10 @@ Application::Application(unsigned int width, unsigned int height)
 	this->m_running = initializeKinect();
 
 	if (!this->m_running) {
-		system("pause");
-		exit(EXIT_FAILURE);
+		//system("pause");
+		//exit(EXIT_FAILURE);
 	}
+	this->m_running = true;
 
 	// Setup GLEW
 	glewExperimental = GL_TRUE;
@@ -59,7 +60,7 @@ Application::Application(unsigned int width, unsigned int height)
 	glLoadIdentity();
 
 	// Initialize texture
-	this->m_texture = new Texture();
+	this->m_texture = new Texture("assets/panda.jpg");
 }
 
 /*
@@ -124,11 +125,12 @@ bool Application::initializeKinect()
 	}
 
 	// Create a new sensor
-	for (int sensorIndex = 0; sensorIndex < numSensors; sensorIndex++) {
-		if (NuiCreateSensorByIndex(0, &this->m_sensor) != S_OK) {
-			std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to create sensor" << endl;
-			return false;
-		}
+	if (NuiCreateSensorByIndex(0, &this->m_sensor) != S_OK) {
+		std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to create sensor" << endl;
+		return false;
+	}
+	else {
+		std::cout << "Successfully loaded Kinect sensor" << endl;
 	}
 
 	// Initialize new sensor
@@ -137,10 +139,10 @@ bool Application::initializeKinect()
 		return false;
 	}
 	this->m_sensor->NuiImageStreamOpen(
-		NUI_IMAGE_TYPE_DEPTH,
-		NUI_IMAGE_RESOLUTION_1280x960,
-		NUI_IMAGE_DEPTH_MAXIMUM,
-		NUI_IMAGE_STREAM_FRAME_LIMIT_MAXIMUM,
+		NUI_IMAGE_TYPE_COLOR,
+		NUI_IMAGE_RESOLUTION_640x480,
+		0,
+		2,
 		NULL,
 		this->m_depthStream
 	);
@@ -149,6 +151,8 @@ bool Application::initializeKinect()
 		std::cerr << "ERROR::INITIALIZE_KINECT:: Sensor status not ok" << endl;
 		return false;
 	}
+
+	return true;
 
 #else
 	if (FAILED(GetDefaultKinectSensor(&this->m_sensor))) {
@@ -185,10 +189,9 @@ bool Application::initializeKinect()
 
 		return true;
 	}
-#endif
-
 	std::cerr << "ERROR::INITIAILIZE_KINECT:: m_sensor was null" << endl;
-	return false;
+	return true;
+#endif
 }
 
 /*
@@ -215,13 +218,13 @@ void Application::Run()
 
 		while (lag >= ApplicationConstants::OptimalTime_) {
 			// Run Updates
-			this->getKinectData(this->m_texture);
+			//this->getKinectData(this->m_texture);
 			lag -= (Uint32) ApplicationConstants::OptimalTime_;
 		}
 
 		// Render...
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		//this->m_texture->Render();
+		this->m_texture->Render();
 		SDL_GL_SwapWindow(this->m_window->GetWindow());
 	}
 }
@@ -237,7 +240,25 @@ bool Application::GetRunning() {
 
 void Application::getKinectData(Texture* texture) {
 #ifdef KINECT18
+	NUI_IMAGE_FRAME imageFrame;
+	NUI_LOCKED_RECT lockedRect;
 
+	// Acquire a frame
+	if (this->m_sensor->NuiImageStreamGetNextFrame(this->m_depthStream, 0, &imageFrame) < 0) {
+		std::cout << "Coud not find data..." << std::endl;
+		return;
+	}
+	std::cout << "Copying data..." << std::endl;
+	INuiFrameTexture* iTexture = imageFrame.pFrameTexture;
+	iTexture->LockRect(0, &lockedRect, NULL, 0);
+
+	if (lockedRect.Pitch != 0) {
+		//const BYTE* curr = (const BYTE*)lockedRect.pBits;
+		//const BYTE* dataEnd = curr + (this->m_window->GetWidth() * this->m_window->GetHeight() * 4);
+		//memcpy(texture->data, curr, (this->m_window->GetWidth() * this->m_window->GetHeight() * 4));
+		iTexture->UnlockRect(0);
+		this->m_sensor->NuiImageStreamReleaseFrame(this->m_depthStream, &imageFrame);
+	}
 #else
 	IDepthFrame* depthFrame = nullptr;
 	if (SUCCEEDED(this->m_depthReader->AcquireLatestFrame(&depthFrame))) {
@@ -250,7 +271,7 @@ void Application::getKinectData(Texture* texture) {
 	// not read the data if it isn't provided.
 	if (SUCCEEDED(this->m_colorReader->AcquireLatestFrame(&frame))) {
 		frame->CopyConvertedFrameDataToArray(this->m_window->GetWidth() * this->m_window->GetHeight() * 4, ((GLubyte*)texture->data), ColorImageFormat_Bgra);
-	}
+		}
 	if (frame) {
 		frame->Release();
 	}
