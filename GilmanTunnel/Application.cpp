@@ -22,7 +22,7 @@ using namespace std; // For error reporting.
 /**
 	Default constructor to initialize the application instance.
 */
-Application::Application(unsigned int width, unsigned int height) 
+Application::Application(unsigned int width, unsigned int height)
 {
 	// Setup SDL2
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -36,10 +36,9 @@ Application::Application(unsigned int width, unsigned int height)
 	this->m_running = initializeKinect();
 
 	if (!this->m_running) {
-		//system("pause");
-		//exit(EXIT_FAILURE);
+		exit(EXIT_FAILURE);
 	}
-	this->m_running = true;
+	this->m_paused = false;
 
 	// Setup GLEW
 	glewExperimental = GL_TRUE;
@@ -61,6 +60,28 @@ Application::Application(unsigned int width, unsigned int height)
 
 	// Initialize texture
 	this->m_texture = new Texture("assets/panda.jpg");
+
+	// Store dimensions
+	this->m_width = width;
+	this->m_height = height;
+
+	// Set depth boolean
+	this->m_depth = true;
+
+	// Allocate space for data
+	if (m_depth) {
+		this->m_depthData = new GLushort[(width * height)];
+		if (!this->m_depthData) {
+			std::cerr << "APPLICATION:: " << "Depth data allocation." << endl;
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		this->m_rgbData = new GLbyte[(width * height) * 4];
+		if (!this->m_rgbData) {
+			std::cerr << "APPLICATION:: " << "RGB data allocation." << endl;
+			exit(EXIT_FAILURE);
+		}
+	}
 }
 
 /*
@@ -70,7 +91,8 @@ Application::~Application()
 {
 	SDL_GL_DeleteContext(this->m_context);
 
-	delete[] this->m_depthData;
+	if (m_depth) delete[] this->m_depthData;
+	//else delete[] this->m_rgbData;
 
 #ifdef KINECT18
 	if (this->m_sensor) {
@@ -86,10 +108,10 @@ Application::~Application()
 #endif
 
 	// Free window memory
-	if (this->m_window) {
-		this->m_window->Free();
-		delete this->m_window;
-	}
+	//if (this->m_window) {
+	//	this->m_window->Free();
+	////	delete this->m_window;
+	//}
 	
 	SDL_Quit();
 }
@@ -138,14 +160,26 @@ bool Application::initializeKinect()
 		std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to initialize NUI" << endl;
 		return false;
 	}
-	this->m_sensor->NuiImageStreamOpen(
-		NUI_IMAGE_TYPE_COLOR,
-		NUI_IMAGE_RESOLUTION_640x480,
-		0,
-		2,
-		NULL,
-		this->m_depthStream
-	);
+	// Choose data to collect
+	if (this->m_depth) {
+		this->m_sensor->NuiImageStreamOpen(
+			NUI_IMAGE_TYPE_DEPTH,
+			NUI_IMAGE_RESOLUTION_1280x960,
+			NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE,
+			2,
+			NULL,
+			&this->m_depthStream
+		);
+	} else {
+		this->m_sensor->NuiImageStreamOpen(
+			NUI_IMAGE_TYPE_COLOR,
+			NUI_IMAGE_RESOLUTION_1280x960,
+			0,
+			2,
+			NULL,
+			&this->m_rgbStream
+		);
+	}
 
 	if (this->m_sensor->NuiStatus() != S_OK) {
 		std::cerr << "ERROR::INITIALIZE_KINECT:: Sensor status not ok" << endl;
@@ -153,7 +187,6 @@ bool Application::initializeKinect()
 	}
 
 	return true;
-
 #else
 	if (FAILED(GetDefaultKinectSensor(&this->m_sensor))) {
 		cerr << "ERROR::INITIALIZE_KINECT:: Unable to initialize sensor" << endl;
@@ -213,18 +246,25 @@ void Application::Run()
 		while (SDL_PollEvent(&e)) {
 			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)) {
 				this->m_running = false;
+			} else if (e.type == SDL_KEYUP && e.key.keysym.sym == SDLK_p) {
+				this->m_paused = !this->m_paused;
 			}
+		}
+
+		if (this->m_paused) {
+			lag = 0;
+			continue;
 		}
 
 		while (lag >= ApplicationConstants::OptimalTime_) {
 			// Run Updates
-			//this->getKinectData(this->m_texture);
+			this->getKinectData();
 			lag -= (Uint32) ApplicationConstants::OptimalTime_;
 		}
 
 		// Render...
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		this->m_texture->Render();
+		this->m_texture->Render(elapsed);
 		SDL_GL_SwapWindow(this->m_window->GetWindow());
 	}
 }
@@ -238,27 +278,56 @@ bool Application::GetRunning() {
 	return this->m_running;
 }
 
-void Application::getKinectData(Texture* texture) {
+/*
+	Copy the kinect data into either the rgbStream
+	or the depth stream.
+*/
+void Application::getKinectData() {
 #ifdef KINECT18
 	NUI_IMAGE_FRAME imageFrame;
 	NUI_LOCKED_RECT lockedRect;
 
 	// Acquire a frame
-	if (this->m_sensor->NuiImageStreamGetNextFrame(this->m_depthStream, 0, &imageFrame) < 0) {
-		std::cout << "Coud not find data..." << std::endl;
-		return;
+	if (this->m_depth) {
+		if (this->m_sensor->NuiImageStreamGetNextFrame(this->m_depthStream, 0, &imageFrame) < 0) {
+			std::cout << "Miss on depth data" << std::endl;
+			return;
+		}
+	} else {
+		if (this->m_sensor->NuiImageStreamGetNextFrame(this->m_rgbStream, 0, &imageFrame) < 0) {
+			std::cout << "Miss on image data" << std::endl;
+			return;
+		}
 	}
-	std::cout << "Copying data..." << std::endl;
+	
 	INuiFrameTexture* iTexture = imageFrame.pFrameTexture;
 	iTexture->LockRect(0, &lockedRect, NULL, 0);
 
+	// Collect frame data
 	if (lockedRect.Pitch != 0) {
-		//const BYTE* curr = (const BYTE*)lockedRect.pBits;
-		//const BYTE* dataEnd = curr + (this->m_window->GetWidth() * this->m_window->GetHeight() * 4);
-		//memcpy(texture->data, curr, (this->m_window->GetWidth() * this->m_window->GetHeight() * 4));
-		iTexture->UnlockRect(0);
-		this->m_sensor->NuiImageStreamReleaseFrame(this->m_depthStream, &imageFrame);
+		if (this->m_depth) {
+			memset(this->m_depthData, 0, this->m_width * this->m_height);
+			const USHORT* curr = (const USHORT*)lockedRect.pBits;
+			const USHORT* dataEnd = curr + (this->m_width * this->m_height);
+			std::cout << "Collecting depth data..." << std::endl;
+			while (curr < dataEnd) {
+				USHORT depth = NuiDepthPixelToDepth(*curr++);
+				*this->m_depthData++ = depth;
+			}
+			this->m_sensor->NuiImageStreamReleaseFrame(this->m_depthStream, &imageFrame);
+		} else {
+			std::cout << "Collecting image data..." << std::endl;
+			memset(this->m_rgbData, 0, this->m_width * this->m_height * 4);
+			const BYTE* curr = (const BYTE*)lockedRect.pBits;
+			const BYTE* dataEnd = curr + 1;
+
+			while (curr < dataEnd) {
+				*this->m_rgbData++ = *curr++;
+			}
+			this->m_sensor->NuiImageStreamReleaseFrame(this->m_rgbStream, &imageFrame);
+		}
 	}
+	iTexture->UnlockRect(0);
 #else
 	IDepthFrame* depthFrame = nullptr;
 	if (SUCCEEDED(this->m_depthReader->AcquireLatestFrame(&depthFrame))) {

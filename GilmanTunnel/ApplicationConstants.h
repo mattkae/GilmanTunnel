@@ -6,5 +6,5 @@ namespace ApplicationConstants {
 	const float OptimalTime_	= Second_ / TargetFps_;
 
 	const unsigned int DefaultWidth_ = 1280;
-	const unsigned int DefaultHeight_ = 800;
+	const unsigned int DefaultHeight_ = 960;
 }

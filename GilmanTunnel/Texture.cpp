@@ -12,7 +12,10 @@
 #include <SDL_opengl.h>
 #include "SOIL.h"
 #include <cstdlib>
-#include <iostream>>
+#include <iostream>
+
+const float TIME_TO_FADE = 5000;
+const float TIME_ALIVE = 30000;
 
 // TO-DO: Variable data.
 GLfloat vertices[] = {
@@ -96,6 +99,7 @@ Texture::Texture(char* path) {
 	// Load shader
 	this->m_shader = new Shader("assets/shader.vs", "assets/shader.fs");
 	std::cout << "Loaded texture " << path << " with dimensions " << w << ", " << h << std::endl;
+	this->m_xvalue = 0.f;
 }
 
 /*
@@ -106,50 +110,34 @@ Texture::~Texture() {
 	glDeleteBuffers(1, &this->m_vbo);
 	glDeleteBuffers(1, &this->m_ebo);
 	//glDeleteFramebuffers(1, &this->m_fbo);
-	free(this->data);
 }
 
-/*
-	Clear data in buffer.
-*/
-void Texture::ClearData() {
-	memset(this->data, 0, sizeof(GLubyte) * ApplicationConstants::DefaultWidth_ * ApplicationConstants::DefaultHeight_ * 4);
-}
 
 /*
 	Render data in buffer to the screen.
 	OpenGL is opaque af, look on learnopengl.com if you're interested.
 */
-void Texture::Render() {
+void Texture::Render(unsigned int elapsed) {
 	/* Bind our framebuffer and draw 3D scene (spinning cube)
 	glBindFramebuffer(GL_FRAMEBUFFER, this->m_fbo);
 	glBindVertexArray(this->m_vao);
 	glEnable(GL_DEPTH_TEST);
 	m_shader->Use();*/
 
+	this->m_xvalue += elapsed;
+	this->m_alpha = 1.f - (this->m_xvalue / TIME_TO_FADE);
+	this->m_alpha = this->m_alpha < 0 ? 0.f : this->m_alpha > 1.f ? 1.f : this->m_alpha;
+
 	// Bind texture
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	m_shader->Use();
 	glBindTexture(GL_TEXTURE_2D, this->m_textureId);
 	m_shader->SetUniform1i("ourTexture1", 0);
+	m_shader->SetUniform1f("alpha", this->m_alpha);
 	// Draw container
 	glBindVertexArray(this->m_vao);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
-}
-
-void Texture::RenderData() {
-	/*
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &this->m_textureId);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ApplicationConstants::DefaultWidth_,
-		ApplicationConstants::DefaultHeight_, 0, GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid*)this->data);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glActiveTexture(GL_TEXTURE0);
-
-	glBindVertexArray(this->m_vao);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-	*/
+	glDisable(GL_BLEND);
 }
