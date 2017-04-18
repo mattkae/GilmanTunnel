@@ -1,21 +1,36 @@
 #pragma once
 
-#include "ApplicationConstants.h"
 #define GLEW_STATIC
+
+#include "ApplicationConstants.h"
 #include <GL/glew.h>
 #include <SDL_opengl.h>
-
-#define KINECT18
 #include <Windows.h>
 #include <NuiApi.h>
-#ifdef KINECT18
-#else
-struct IKinectSensor;
-struct IColorFrameReader;
-struct IDepthFrameReader;
-#endif
+#include <vector>
+#include <string>
+
 class Texture;
+class KinectTexture;
 class Window;
+
+
+// Determines what data we're trying to display
+enum ApplicationState {
+	ApplicationState_Depth,
+	ApplicationState_RGB,
+	ApplicationState_Gallery
+};
+
+
+// Determines whether someone is in the way of the Kinect
+// Crossed state invalid is triggered when the Kinect does
+// not collect data.
+enum CrossedState {
+	CrossedState_True,
+	CrossedState_False,
+	CrossedState_Invalid
+};
 
 class Application {
 public:
@@ -27,27 +42,25 @@ public:
 	bool GetRunning();
 private:
 	bool initializeKinect();
-	void getKinectData();
+	void loadImagePaths();
+	void getKinectDepthData(GLubyte* dest);
+	void getKinectRgbData(GLubyte* dest);
+	CrossedState checkIfCrossed();
 
 	int m_width, m_height;				// Dimensions of application
-	bool m_depth;							// Set true when reading depth buffer
+	ApplicationState m_state;			// Specifies what data we're interested in
 
-#ifdef KINECT18
 	INuiSensor* m_sensor;
 	HANDLE m_rgbStream;
 	HANDLE m_depthStream;
-#else
-	IKinectSensor* m_sensor;			// Kinect sensor
-	IColorFrameReader* m_colorReader;	// Kinect color data source
-	IDepthFrameReader* m_depthReader;	// Kinect depth data
-#endif
+
 	bool m_running;						// Denotes prepared instance of Application
 	bool m_paused;						// Denotes paused instance of Application
 	Window* m_window;					// Window context
 	int m_depthHeight, m_depthWidth;	// Depth Reader dimensions
-
-	Texture* m_texture;					// Texture being rendered
-	GLbyte* m_rgbData;					// Holds color data
-	GLushort* m_depthData;				// Holds depth data
 	void* m_context;					// GL's context
+	
+	std::vector<std::string> m_paths;	// All of the image paths in the directory
+	Texture* m_texture;					// Texture being rendered
+	KinectTexture* m_kTexture;			// Texture from kinect being rendered
 };

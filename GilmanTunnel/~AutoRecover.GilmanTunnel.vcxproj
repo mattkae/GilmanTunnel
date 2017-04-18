@@ -89,7 +89,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(KINECTSDK10_DIR)inc;C:\SDL2\include;C:\glew\include;C:\Program Files\Microsoft SDKs\Kinect\v1.8\inc;C:\soil\src\;C:\dirent\include\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(KINECTSDK10_DIR)inc;C:\SDL2\include;C:\glew\include;C:\Program Files\Microsoft SDKs\Kinect\v1.8\inc;C:\soil\src\</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>$(KINECTSDK10_DIR);C:\SDL2\;C:\glew;C:\Program Files\Microsoft SDKs\Kinect\v1.8\;C:\soil\</AdditionalUsingDirectories>
     </ClCompile>
     <Link>

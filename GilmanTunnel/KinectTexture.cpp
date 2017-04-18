@@ -1,43 +1,18 @@
-/**
-	Texture.cpp
-	Purpose: Render the buffer to the screen.
-**/
-
 #include "stdafx.h"
-#include "Texture.h"
+#include "KinectTexture.h"
 #include "Shader.h"
-#include "SOIL.h"
-#include <cstdlib>
 #include <iostream>
 
-const float TIME_TO_FADE = 5000;
-const float TIME_ALIVE = 30000;
-
-
-/*
-	Default constructor generates an empty texture
-*/
-Texture::Texture() 
+KinectTexture::KinectTexture(int size) 
 {
-	Texture(nullptr);
-}
-
-/*
-	Parameterized Constructor loads an image from the given path with SOIL.
-
-	@param path path to image
-*/
-Texture::Texture(char* path) 
-{
-	// Do nothing on a nullptr
-	if (path == nullptr)
-		return;
+	// Allocate data
+	this->data = new GLubyte[size];
 
 	// Generate buffers
 	glGenBuffers(1, &this->m_vao);
 	glGenBuffers(1, &this->m_vbo);
 	glGenBuffers(1, &this->m_ebo);
-	
+
 	// Load vertex data
 	glBindVertexArray(this->m_vao);
 	glBindBuffer(GL_ARRAY_BUFFER, this->m_vao);
@@ -62,14 +37,9 @@ Texture::Texture(char* path)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	GLint w, h;
-
-	// Load image data into textyure
-	unsigned char* image = SOIL_load_image(path, &w, &h, 0, SOIL_LOAD_RGB);
-	if (!image)
-		std::cerr << "TEXTURE:: Unable to load image from path: " << path << std::endl;
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	SOIL_free_image_data(image);
+	w = ApplicationConstants::DefaultWidth_;
+	h = ApplicationConstants::DefaultHeight_;
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)this->data);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// Set variables
@@ -79,35 +49,29 @@ Texture::Texture(char* path)
 
 	// Load shader
 	this->m_shader = new Shader("assets/shaders/shader.vs", "assets/shaders/shader.fs");
-	std::cout << "Loaded texture " << path << " with dimensions " << w << ", " << h << std::endl;
+
+	// Set alpha value
+	this->m_xvalue = 1.f;
 	this->m_alpha = 0.5f;
+
+	std::cout << "Loaded kinect texture" << std::endl;
 }
 
-/*
-	Default destructor.
-*/
-Texture::~Texture()
+
+KinectTexture::~KinectTexture()
 {
-	glDeleteVertexArrays(1, &this->m_vao);
-	glDeleteBuffers(1, &this->m_vbo);
-	glDeleteBuffers(1, &this->m_ebo);
+	delete this->data;
 }
 
-/*
-	Render data in buffer to the screen.
-	OpenGL is opaque af, look on learnopengl.com if you're interested.
-*/
-void Texture::Render(unsigned int elapsed)
-{
-	/*this->m_xvalue += elapsed;
-	this->m_alpha = 1.f - (this->m_xvalue / TIME_TO_FADE);
-	this->m_alpha = this->m_alpha < 0 ? 0.f : this->m_alpha > 1.f ? 1.f : this->m_alpha;*/
 
-	// Bind texture
+
+void KinectTexture::Render(unsigned int elapsed) 
+{
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	m_shader->Use();
 	glBindTexture(GL_TEXTURE_2D, this->m_textureId);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, this->m_width, this->m_height, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)this->data);
 	m_shader->SetUniform1i("ourTexture1", 0);
 	m_shader->SetUniform1f("alpha", this->m_alpha);
 	// Draw container

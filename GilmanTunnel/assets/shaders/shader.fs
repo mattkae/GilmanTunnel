@@ -11,5 +11,5 @@ uniform float alpha;
 void main()
 {
 	// Linearly interpolate between both textures (second texture is only slightly combined)
-	color = mix(texture2D(ourTexture1, TexCoord), vec4(0.f,0.f,0.f,0.f), alpha);
+	color = mix(texture2D(ourTexture1, TexCoord), vec4(ourColor,0.f), alpha);
 }
