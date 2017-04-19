@@ -193,7 +193,8 @@ bool Application::initializeKinect()
 }
 
 /*
-
+	Copy the paths to all images in the images directory into
+	a standard vector.
 */
 void Application::loadImagePaths() {
 	DIR *dir;
@@ -203,7 +204,7 @@ void Application::loadImagePaths() {
 		while ((ent = readdir(dir)) != NULL) {
 			std::string name = ent->d_name;
 			if (!(name.compare(".") == 0 || name.compare("..") == 0)) {
-				this->m_paths.push_back(name);
+				this->m_paths.push_back("assets/images/" + name);
 			}
 		}
 		closedir(dir);
