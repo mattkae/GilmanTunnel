@@ -95,7 +95,7 @@ Application::~Application()
 }
 
 /*
-	Copy coonstructor.
+	Copy constructor.
 */
 Application::Application(Application& other) 
 {
@@ -131,7 +131,7 @@ bool Application::initializeKinect()
 		std::cout << "SUCCESS:: Successfully loaded Kinect sensor" << endl;
 	}
 	// Initialize new sensor
-	hr = this->m_sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_COLOR);
+	hr = this->m_sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH | NUI_INITIALIZE_FLAG_USES_COLOR);
 	if (hr != S_OK) {
 		std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to initialize NUI" << endl;
 		return false;
@@ -155,7 +155,7 @@ bool Application::initializeKinect()
 	case ApplicationState_RGB:
 		hr = this->m_sensor->NuiImageStreamOpen(
 			NUI_IMAGE_TYPE_COLOR,
-			NUI_IMAGE_RESOLUTION_640x480,
+			NUI_IMAGE_RESOLUTION_1280x960,
 			0,
 			2,
 			NULL,
@@ -168,7 +168,7 @@ bool Application::initializeKinect()
 		break;
 	case ApplicationState_Gallery:
 		hr = this->m_sensor->NuiImageStreamOpen(
-			NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX,
+			NUI_IMAGE_TYPE_DEPTH,
 			NUI_IMAGE_RESOLUTION_640x480,
 			0,
 			2,
@@ -221,12 +221,23 @@ void Application::Run()
 	Uint32 currentTime, lastTime = 0, elapsed;
 	float lag = 0;
 	SDL_Event e;
-	CrossedState globalState = CrossedState_False;
+
+	CrossedState globalState;
+	CrossedState currentState = CrossedState_True;
+	switch (this->m_state) {
+	case ApplicationState_Depth:
+	case ApplicationState_RGB:
+		globalState = CrossedState_True;
+		break;
+	case ApplicationState_Gallery:
+	default:
+		globalState = CrossedState_False;
+		currentState = CrossedState_False;
+		break;
+	}
 
 	// Main loop
 	while (this->m_running) {
-		CrossedState currentState = CrossedState_True;
-
 		// Update timing variables
 		currentTime = SDL_GetTicks();
 		elapsed = currentTime - lastTime;
@@ -257,9 +268,8 @@ void Application::Run()
 				break;
 			case ApplicationState_Gallery:
 				currentState = this->checkIfCrossed();
-				if (currentState != CrossedState_Invalid) {
-					globalState = currentState;
-				}
+				if (currentState == CrossedState_Invalid && globalState == CrossedState_True)
+					currentState = CrossedState_True;
 				break;
 			default:
 				break;
@@ -268,7 +278,7 @@ void Application::Run()
 		}
 		// Render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		if (globalState == CrossedState_True) {
+		if (globalState == CrossedState_True && currentState == CrossedState_True) {
 			switch (this->m_state) {
 			case ApplicationState_Depth:
 				this->m_kTexture->Render(elapsed);
@@ -282,6 +292,9 @@ void Application::Run()
 			}
 		}
 		SDL_GL_SwapWindow(this->m_window->GetWindow());
+
+		if (currentState != CrossedState_Invalid)
+			globalState = currentState;
 	}
 }
 
@@ -310,7 +323,7 @@ void Application::getKinectDepthData(GLubyte* dest) {
 	if (LockedRect.Pitch != 0)
 	{
 		const USHORT* curr = (const USHORT*)LockedRect.pBits;
-		const USHORT* dataEnd = curr + (this->m_width * this->m_height);
+		const USHORT* dataEnd = curr + (ApplicationConstants::DepthWidth_ * ApplicationConstants::DepthHeight_);
 
 		while (curr < dataEnd) {
 			// Get depth in millimeters
@@ -370,16 +383,25 @@ CrossedState Application::checkIfCrossed() {
 	if (LockedRect.Pitch != 0)
 	{
 		const USHORT* curr = (const USHORT*)LockedRect.pBits;
-		const USHORT* dataEnd = curr + (this->m_width * this->m_height);
+		const USHORT* dataEnd = curr + (ApplicationConstants::DepthWidth_ * ApplicationConstants::DepthHeight_);
 
+		int index = 0;
 		while (curr < dataEnd) {
-			// Get depth in millimeters
-			USHORT depth = NuiDepthPixelToDepth(*curr++);
+			int x = index % ApplicationConstants::DepthWidth_;
+			int y = floor(index / ApplicationConstants::DepthHeight_);
+			if (x > ApplicationConstants::DepthWidth_ / 4.f && x < ApplicationConstants::DepthWidth_ * (3.f / 4.f)) {
+				if (y > (ApplicationConstants::DepthHeight_ / 4.f) && y < ApplicationConstants::DepthHeight_ * (3.f / 4.f)) {
+					// Get depth in millimeters
+					USHORT depth = NuiDepthPixelToDepth(*curr);
 
-			if (depth < 900 && depth != 0) {
-				result = CrossedState_True;
-				break;
+					if (depth < ApplicationConstants::MaxDepth_ && depth > 0) {
+						result = CrossedState_True;
+						break;
+					}
+				}
 			}
+			*curr++;
+			index++;
 		}
 	}
 	texture->UnlockRect(0);

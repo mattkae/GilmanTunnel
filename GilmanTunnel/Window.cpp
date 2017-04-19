@@ -18,6 +18,7 @@ Window::Window(GLuint width, GLuint height, const GLchar* name)
 	this->m_height = height;
 
 	this->m_window = SDL_CreateWindow(name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
+	//SDL_SetWindowFullscreen(this->m_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 }
 
 /*

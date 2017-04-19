@@ -57,7 +57,6 @@ private:
 	bool m_running;						// Denotes prepared instance of Application
 	bool m_paused;						// Denotes paused instance of Application
 	Window* m_window;					// Window context
-	int m_depthHeight, m_depthWidth;	// Depth Reader dimensions
 	void* m_context;					// GL's context
 	
 	std::vector<std::string> m_paths;	// All of the image paths in the directory
