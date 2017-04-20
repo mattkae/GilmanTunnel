@@ -51,10 +51,9 @@ KinectTexture::KinectTexture(int size)
 	this->m_shader = new Shader("assets/shaders/shader.vs", "assets/shaders/shader.fs");
 
 	// Set alpha value
-	this->m_xvalue = 1.f;
 	this->m_alpha = 0.5f;
 
-	std::cout << "Loaded kinect texture" << std::endl;
+	std::cout << "Loaded kinect texture." << std::endl;
 }
 
 

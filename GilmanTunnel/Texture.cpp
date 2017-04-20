@@ -10,34 +10,74 @@
 #include <cstdlib>
 #include <iostream>
 
-const float TIME_TO_FADE = 5000;
-const float TIME_ALIVE = 30000;
-
 
 /*
 	Default constructor generates an empty texture
 */
 Texture::Texture() 
 {
-	Texture(nullptr);
+	this->m_textureId = 0;
+	this->m_width = 0;
+	this->m_height = 0;
+	this->m_alpha = 0.f;
+	this->m_elapsed = 0;
+	this->m_shader = nullptr;
+}
+
+
+/*
+	Default destructor.
+*/
+Texture::~Texture()
+{
+	glDeleteVertexArrays(1, &this->m_vao);
+	glDeleteBuffers(1, &this->m_vbo);
+	glDeleteBuffers(1, &this->m_ebo);
+	delete m_shader;
 }
 
 /*
-	Parameterized Constructor loads an image from the given path with SOIL.
-
-	@param path path to image
+	
 */
-Texture::Texture(char* path) 
+bool Texture::LoadTexture(char* path)
 {
 	// Do nothing on a nullptr
 	if (path == nullptr)
-		return;
+		return false;
+
+	// Load shader program
+	this->m_shader = new Shader("assets/shaders/shader.vs", "assets/shaders/shader.fs");
 
 	// Generate buffers
 	glGenBuffers(1, &this->m_vao);
 	glGenBuffers(1, &this->m_vbo);
 	glGenBuffers(1, &this->m_ebo);
-	
+
+	// Create texture
+	GLuint textureId;
+	glGenTextures(1, &textureId);
+	glBindTexture(GL_TEXTURE_2D, textureId);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	GLint w, h;
+
+	// Load image data into textyure
+	unsigned char* image = SOIL_load_image(path, &w, &h, 0, SOIL_LOAD_RGBA);
+	if (!image) {
+		std::cerr << "TEXTURE:: Unable to load image from path: " << path << std::endl;
+		return false;
+	}
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE,(GLvoid*)image);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	SOIL_free_image_data(image);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	/*GLfloat widthRatio = w / ApplicationConstants::DefaultWidth_;
+	GLfloat heightRatio = h / ApplicationConstants::DefaultHeight_;
+
+	GLfloat usedWidthRatio = widthRatio > 1.f ? 1.f : widthRatio;
+	GLfloat usedHeightRatio = heightRatio * (usedWidthRatio / widthRatio);*/
+
 	// Load vertex data
 	glBindVertexArray(this->m_vao);
 	glBindBuffer(GL_ARRAY_BUFFER, this->m_vao);
@@ -55,42 +95,16 @@ Texture::Texture(char* path)
 	glEnableVertexAttribArray(2);
 	glBindVertexArray(0);
 
-	// Create texture
-	GLuint textureId;
-	glGenTextures(1, &textureId);
-	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	GLint w, h;
-
-	// Load image data into textyure
-	unsigned char* image = SOIL_load_image(path, &w, &h, 0, SOIL_LOAD_RGB);
-	if (!image)
-		std::cerr << "TEXTURE:: Unable to load image from path: " << path << std::endl;
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	SOIL_free_image_data(image);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
 	// Set variables
 	this->m_textureId = textureId;
 	this->m_width = w;
 	this->m_height = h;
-
-	// Load shader
-	this->m_shader = new Shader("assets/shaders/shader.vs", "assets/shaders/shader.fs");
+	this->m_alpha = 0.0f;
+	this->m_elapsed = 0;
+	this->m_path = path;
 	std::cout << "Loaded texture " << path << " with dimensions " << w << ", " << h << std::endl;
-	this->m_alpha = 0.5f;
-}
 
-/*
-	Default destructor.
-*/
-Texture::~Texture()
-{
-	glDeleteVertexArrays(1, &this->m_vao);
-	glDeleteBuffers(1, &this->m_vbo);
-	glDeleteBuffers(1, &this->m_ebo);
+	return true;
 }
 
 /*
@@ -99,9 +113,14 @@ Texture::~Texture()
 */
 void Texture::Render(unsigned int elapsed)
 {
-	/*this->m_xvalue += elapsed;
-	this->m_alpha = 1.f - (this->m_xvalue / TIME_TO_FADE);
-	this->m_alpha = this->m_alpha < 0 ? 0.f : this->m_alpha > 1.f ? 1.f : this->m_alpha;*/
+	this->m_elapsed += elapsed;
+	if (this->m_elapsed <= ApplicationConstants::FadeInTime_) {
+		this->m_alpha = 1.f - (this->m_elapsed / (float)ApplicationConstants::FadeInTime_);
+	} else if (this->m_elapsed >= ApplicationConstants::FadeOutTime_) {
+		this->m_alpha = 1.f - ((ApplicationConstants::ProjectionTime_ - this->m_elapsed) / (float)ApplicationConstants::FadeInTime_);
+	} else {
+		this->m_alpha = 0.f;
+	}
 
 	// Bind texture
 	glEnable(GL_BLEND);
@@ -115,4 +134,19 @@ void Texture::Render(unsigned int elapsed)
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 	glDisable(GL_BLEND);
+}
+
+
+void Texture::Reset() {
+	this->m_alpha = 0.f;
+	this->m_elapsed = 0;
+}
+
+
+std::string Texture::GetPath() {
+	return this->m_path;
+}
+
+void Texture::SetElapsed(float e) {
+	this->m_elapsed = e;
 }

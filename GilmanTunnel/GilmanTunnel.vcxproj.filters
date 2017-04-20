@@ -42,6 +42,9 @@
     <ClInclude Include="KinectTexture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Gallery.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -63,6 +66,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="KinectTexture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Gallery.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

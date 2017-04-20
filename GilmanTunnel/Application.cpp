@@ -6,13 +6,12 @@
 
 #include "stdafx.h"
 #include "Application.h"
-#include "Texture.h"
 #include "KinectTexture.h"
 #include "Window.h"
+#include "Gallery.h"
 #include <SDL.h>
 #include <iostream>
 #include <NuiImageCamera.h>
-#include <dirent.h>
 
 using namespace std; // For error reporting.
 
@@ -59,10 +58,9 @@ Application::Application(unsigned int width, unsigned int height)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	// Load all image paths
-	this->loadImagePaths();
+
 	// Initialize textures
-	this->m_texture = new Texture("assets/images/panda.jpg");
+	this->m_gallery = new Gallery();
 	this->m_kTexture = new KinectTexture(width * height * 4);
 
 	// Store application variables
@@ -79,7 +77,7 @@ Application::~Application()
 	// Free GL data
 	SDL_GL_DeleteContext(this->m_context);
 	// Free texture data
-	delete this->m_texture;
+	delete this->m_gallery;
 	delete this->m_kTexture;
 	// Free sensor data
 	if (this->m_sensor) {
@@ -193,27 +191,6 @@ bool Application::initializeKinect()
 }
 
 /*
-	Copy the paths to all images in the images directory into
-	a standard vector.
-*/
-void Application::loadImagePaths() {
-	DIR *dir;
-	struct dirent *ent;
-	if ((dir = opendir("assets/images/")) != NULL) {
-		/* print all the files and directories within directory */
-		while ((ent = readdir(dir)) != NULL) {
-			std::string name = ent->d_name;
-			if (!(name.compare(".") == 0 || name.compare("..") == 0)) {
-				this->m_paths.push_back("assets/images/" + name);
-			}
-		}
-		closedir(dir);
-	} else {
-		return;
-	}
-}
-
-/*
 	Runs the application using SDL2 as a context.
 */
 void Application::Run() 
@@ -221,20 +198,6 @@ void Application::Run()
 	Uint32 currentTime, lastTime = 0, elapsed;
 	float lag = 0;
 	SDL_Event e;
-
-	CrossedState globalState;
-	CrossedState currentState = CrossedState_True;
-	switch (this->m_state) {
-	case ApplicationState_Depth:
-	case ApplicationState_RGB:
-		globalState = CrossedState_True;
-		break;
-	case ApplicationState_Gallery:
-	default:
-		globalState = CrossedState_False;
-		currentState = CrossedState_False;
-		break;
-	}
 
 	// Main loop
 	while (this->m_running) {
@@ -267,9 +230,7 @@ void Application::Run()
 				this->getKinectRgbData(this->m_kTexture->data);
 				break;
 			case ApplicationState_Gallery:
-				currentState = this->checkIfCrossed();
-				if (currentState == CrossedState_Invalid && globalState == CrossedState_True)
-					currentState = CrossedState_True;
+				this->m_gallery->Update(this->checkIfCrossed());
 				break;
 			default:
 				break;
@@ -278,23 +239,20 @@ void Application::Run()
 		}
 		// Render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		if (globalState == CrossedState_True && currentState == CrossedState_True) {
-			switch (this->m_state) {
-			case ApplicationState_Depth:
-				this->m_kTexture->Render(elapsed);
-				break;
-			case ApplicationState_RGB:
-				this->m_kTexture->Render(elapsed);
-				break;
-			default:
-				this->m_texture->Render(elapsed);
-				break;
-			}
+		switch (this->m_state) {
+		case ApplicationState_Depth:
+			this->m_kTexture->Render(elapsed);
+			break;
+		case ApplicationState_RGB:
+			this->m_kTexture->Render(elapsed);
+			break;
+		case ApplicationState_Gallery:
+			this->m_gallery->Render(elapsed);
+			break;
+		default:
+			break;
 		}
 		SDL_GL_SwapWindow(this->m_window->GetWindow());
-
-		if (currentState != CrossedState_Invalid)
-			globalState = currentState;
 	}
 }
 
