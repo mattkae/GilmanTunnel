@@ -230,7 +230,7 @@ void Application::Run()
 				this->getKinectRgbData(this->m_kTexture->data);
 				break;
 			case ApplicationState_Gallery:
-				this->m_gallery->Update(this->checkIfCrossed());
+				this->m_gallery->Update(this->setDepthData(this->m_gallery->GetData()));
 				break;
 			default:
 				break;
@@ -329,7 +329,7 @@ void Application::getKinectRgbData(GLubyte* dest) {
 /*
 
 */
-CrossedState Application::checkIfCrossed() {
+CrossedState Application::setDepthData(USHORT* dest) {
 	CrossedState result = CrossedState_False;
 	NUI_IMAGE_FRAME imageFrame;
 	NUI_LOCKED_RECT LockedRect;
@@ -347,17 +347,16 @@ CrossedState Application::checkIfCrossed() {
 		while (curr < dataEnd) {
 			int x = index % ApplicationConstants::DepthWidth_;
 			int y = floor(index / ApplicationConstants::DepthHeight_);
+			// Get depth in millimeters
+			USHORT depth = NuiDepthPixelToDepth(*curr);
 			if (x > ApplicationConstants::DepthWidth_ / 4.f && x < ApplicationConstants::DepthWidth_ * (3.f / 4.f)) {
 				if (y > (ApplicationConstants::DepthHeight_ / 4.f) && y < ApplicationConstants::DepthHeight_ * (3.f / 4.f)) {
-					// Get depth in millimeters
-					USHORT depth = NuiDepthPixelToDepth(*curr);
-
 					if (depth < ApplicationConstants::MaxDepth_ && depth > 0) {
 						result = CrossedState_True;
-						break;
 					}
 				}
 			}
+			*dest++ = depth;
 			*curr++;
 			index++;
 		}

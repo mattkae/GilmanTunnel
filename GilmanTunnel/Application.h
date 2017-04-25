@@ -32,7 +32,7 @@ private:
 	bool initializeKinect();
 	void getKinectDepthData(GLubyte* dest);
 	void getKinectRgbData(GLubyte* dest);
-	CrossedState checkIfCrossed();
+	CrossedState setDepthData(USHORT* dest);
 
 	int m_width, m_height;				// Dimensions of application
 	ApplicationState m_state;			// Specifies what data we're interested in
@@ -47,5 +47,5 @@ private:
 	void* m_context;					// GL's context
 	
 	KinectTexture* m_kTexture;			// Texture from kinect being rendered
-	Gallery* m_gallery;
+	Gallery* m_gallery;					// Picture gallery
 };
