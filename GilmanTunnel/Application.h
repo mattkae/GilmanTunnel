@@ -31,9 +31,10 @@ public:
 	bool GetRunning();
 private:
 	bool initializeKinect();
-	void getKinectDepthData(GLubyte* dest);
-	void getKinectRgbData(GLubyte* dest);
-	CrossedState setDepthData(USHORT* dest);
+	void updateDepthStream(GLubyte* dest);
+	void updateRGBStream(GLubyte* dest, int width = ApplicationConstants::DefaultWidth_, int height = ApplicationConstants::DefaultHeight_);
+	CrossedState updateGalleryData(USHORT* dest);
+	void updateDepthData(USHORT* dest);
 
 	int m_width, m_height;				// Dimensions of application
 	ApplicationState m_state;			// Specifies what data we're interested in
@@ -50,6 +51,8 @@ private:
 	
 	KinectTexture* m_rgbTexture;		//RGB Texture from Kinect frame
 	KinectTexture* m_depthTexture;		//RGB Texture from Kinect frame
-	KinectTexture* m_particleData;		//RGB Texxture for particle
+	KinectTexture* m_particleSrcTexture;//RGB Texture for particle
+	KinectTexture* m_particleDestTexture;//RGB Texture for particle
+	USHORT* m_depthData;				//Distance data for particle
 	Gallery* m_gallery;					// Picture gallery
 };
