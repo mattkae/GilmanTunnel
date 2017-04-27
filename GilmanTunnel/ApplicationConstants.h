@@ -28,7 +28,7 @@ namespace ApplicationConstants {
 	const unsigned int DepthWidth_			= 640;
 	const unsigned int DepthHeight_			= 480;
 
-	const USHORT MaxDepth_					= 1700.f;
+	const float MaxDepth_					= 1700.f;
 
 	const unsigned int ProjectionTime_		= 10 * Second_;
 	const unsigned int FadeInTime_			= ProjectionTime_ / 4;

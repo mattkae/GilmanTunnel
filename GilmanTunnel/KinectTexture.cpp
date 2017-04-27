@@ -3,7 +3,7 @@
 #include "Shader.h"
 #include <iostream>
 
-KinectTexture::KinectTexture(int size) 
+KinectTexture::KinectTexture(int size, int width, int height) 
 {
 	// Allocate data
 	this->data = new GLubyte[size];
@@ -37,8 +37,8 @@ KinectTexture::KinectTexture(int size)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	GLint w, h;
-	w = ApplicationConstants::DefaultWidth_;
-	h = ApplicationConstants::DefaultHeight_;
+	w = width;
+	h = height;
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)this->data);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -53,7 +53,7 @@ KinectTexture::KinectTexture(int size)
 	// Set alpha value
 	this->m_alpha = 0.5f;
 
-	std::cout << "Loaded kinect texture." << std::endl;
+	std::cout << "SUCCESS:: Loaded kinect texture with size " << size << std::endl;
 }
 
 

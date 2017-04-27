@@ -18,7 +18,8 @@ class Gallery;
 enum ApplicationState {
 	ApplicationState_Depth,
 	ApplicationState_RGB,
-	ApplicationState_Gallery
+	ApplicationState_Gallery,
+	ApplicationState_Particle
 };
 
 class Application {
@@ -40,12 +41,15 @@ private:
 	INuiSensor* m_sensor;				// Kinect sensor
 	HANDLE m_rgbStream;					// Stream for Color Data
 	HANDLE m_depthStream;				// Stream for Depth data
+	HANDLE m_infraredStream;				// Stream for infrared data
 
 	bool m_running;						// Denotes prepared instance of Application
 	bool m_paused;						// Denotes paused instance of Application
 	Window* m_window;					// Window context
 	void* m_context;					// GL's context
 	
-	KinectTexture* m_kTexture;			// Texture from kinect being rendered
+	KinectTexture* m_rgbTexture;		//RGB Texture from Kinect frame
+	KinectTexture* m_depthTexture;		//RGB Texture from Kinect frame
+	KinectTexture* m_particleData;		//RGB Texxture for particle
 	Gallery* m_gallery;					// Picture gallery
 };

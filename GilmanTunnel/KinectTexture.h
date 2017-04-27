@@ -4,9 +4,8 @@
 
 class KinectTexture : public Texture {
 public:
-	KinectTexture();
-	KinectTexture(int size);
+	KinectTexture(int size, int width, int height);
 	~KinectTexture();
 	void Render(unsigned int elapsed);
-	GLubyte* data;
+	GLubyte* data;		// The RGB Data in the texture
 };

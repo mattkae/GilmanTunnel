@@ -9,6 +9,7 @@
 #include "KinectTexture.h"
 #include "Window.h"
 #include "Gallery.h"
+#include "ParticleProcessing.h"
 #include <SDL.h>
 #include <iostream>
 #include <NuiImageCamera.h>
@@ -20,8 +21,8 @@ using namespace std; // For error reporting.
 */
 Application::Application(unsigned int width, unsigned int height)
 {
-	// Set depth boolean
-	this->m_state = ApplicationState_Gallery;
+	// Set state
+	this->m_state = ApplicationState_Particle;
 
 	// Initialize Kinect sensor
 	this->m_running = initializeKinect();
@@ -61,7 +62,11 @@ Application::Application(unsigned int width, unsigned int height)
 
 	// Initialize textures
 	this->m_gallery = new Gallery();
-	this->m_kTexture = new KinectTexture(width * height * 4);
+	this->m_rgbTexture = new KinectTexture(width * height * 4, width, height);
+	this->m_particleData = new KinectTexture(width * height * 4, width, height);
+	this->m_depthTexture = new KinectTexture(ApplicationConstants::DepthWidth_ * ApplicationConstants::DepthHeight_ * 4,
+											ApplicationConstants::DepthWidth_,
+											ApplicationConstants::DepthHeight_);
 
 	// Store application variables
 	this->m_width = width;
@@ -77,8 +82,12 @@ Application::~Application()
 	// Free GL data
 	SDL_GL_DeleteContext(this->m_context);
 	// Free texture data
-	delete this->m_gallery;
-	delete this->m_kTexture;
+	if (this->m_gallery)
+		delete this->m_gallery;
+	if (this->m_rgbTexture)
+		delete this->m_rgbTexture;
+	if (this->m_particleData)
+		delete this->m_particleData;
 	// Free sensor data
 	if (this->m_sensor) {
 		this->m_sensor->NuiShutdown();
@@ -136,20 +145,7 @@ bool Application::initializeKinect()
 	}
 	// Choose data to collect
 	switch (this->m_state) {
-	case ApplicationState_Depth:
-		hr = this->m_sensor->NuiImageStreamOpen(
-			NUI_IMAGE_TYPE_DEPTH,
-			NUI_IMAGE_RESOLUTION_640x480,
-			0,
-			2,
-			NULL,
-			&this->m_depthStream
-		);
-		if (hr!= S_OK) {
-			std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to open depth stream: Error code " << hr << std::endl;
-			return false;
-		}
-		break;
+	case ApplicationState_Particle:
 	case ApplicationState_RGB:
 		hr = this->m_sensor->NuiImageStreamOpen(
 			NUI_IMAGE_TYPE_COLOR,
@@ -164,6 +160,7 @@ bool Application::initializeKinect()
 			return false;
 		}
 		break;
+	case ApplicationState_Depth:
 	case ApplicationState_Gallery:
 		hr = this->m_sensor->NuiImageStreamOpen(
 			NUI_IMAGE_TYPE_DEPTH,
@@ -224,14 +221,17 @@ void Application::Run()
 			// Run Updates
 			switch (this->m_state) {
 			case ApplicationState_Depth:
-				this->getKinectDepthData(this->m_kTexture->data);
+				this->getKinectDepthData(this->m_depthTexture->data);
 				break;
 			case ApplicationState_RGB:
-				this->getKinectRgbData(this->m_kTexture->data);
+				this->getKinectRgbData(this->m_rgbTexture->data);
 				break;
 			case ApplicationState_Gallery:
 				this->m_gallery->Update(this->setDepthData(this->m_gallery->GetData()));
 				break;
+			case ApplicationState_Particle:
+				this->getKinectRgbData(this->m_rgbTexture->data);
+				DetectEdges(this->m_rgbTexture->data, this->m_particleData->data, ApplicationConstants::DefaultWidth_, ApplicationConstants::DefaultHeight_);
 			default:
 				break;
 			}
@@ -240,11 +240,14 @@ void Application::Run()
 		// Render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		switch (this->m_state) {
+		case ApplicationState_Particle:
+			this->m_particleData->Render(elapsed);
+			break;
 		case ApplicationState_Depth:
-			this->m_kTexture->Render(elapsed);
+			this->m_depthTexture->Render(elapsed);
 			break;
 		case ApplicationState_RGB:
-			this->m_kTexture->Render(elapsed);
+			this->m_rgbTexture->Render(elapsed);
 			break;
 		case ApplicationState_Gallery:
 			this->m_gallery->Render(elapsed);
@@ -266,16 +269,16 @@ bool Application::GetRunning() {
 }
 
 /*
-	
+	Stores a grayscaled image of the Kinect's depth data in dest.
+
+	@param dest where to store the data
 */
 void Application::getKinectDepthData(GLubyte* dest) {
 	NUI_IMAGE_FRAME imageFrame;
 	NUI_LOCKED_RECT LockedRect;
 	if (this->m_sensor->NuiImageStreamGetNextFrame(this->m_depthStream, 0, &imageFrame) < 0) {
-		//std::cout << "Not collecting.." << std::endl;
 		return;
 	}
-	//std::cout << " collecting.." << std::endl;
 	INuiFrameTexture* texture = imageFrame.pFrameTexture;
 	texture->LockRect(0, &LockedRect, NULL, 0);
 	if (LockedRect.Pitch != 0)
@@ -298,19 +301,17 @@ void Application::getKinectDepthData(GLubyte* dest) {
 	this->m_sensor->NuiImageStreamReleaseFrame(this->m_depthStream, &imageFrame);
 }
 
-
-
 /*
-	
+	Stores the Kinect's RGB data in dest.
+
+	@param dest where to store the data
 */
 void Application::getKinectRgbData(GLubyte* dest) {
 	NUI_IMAGE_FRAME imageFrame;
 	NUI_LOCKED_RECT LockedRect;
 	if (this->m_sensor->NuiImageStreamGetNextFrame(this->m_rgbStream, 0, &imageFrame) < 0) {
-		std::cout << "Not collecting.." << std::endl;
 		return;
 	}
-	std::cout << " collecting.." << std::endl;
 	INuiFrameTexture* texture = imageFrame.pFrameTexture;
 	texture->LockRect(0, &LockedRect, NULL, 0);
 	if (LockedRect.Pitch != 0)
@@ -327,7 +328,11 @@ void Application::getKinectRgbData(GLubyte* dest) {
 }
 
 /*
+	Stores the Kinect's depth data in dest and returns
+	the current state of the Kinect.
 
+	@param dest where to store depth data
+	@return result the current CrossedState of the Kinect
 */
 CrossedState Application::setDepthData(USHORT* dest) {
 	CrossedState result = CrossedState_False;

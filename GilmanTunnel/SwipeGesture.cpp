@@ -6,18 +6,27 @@
 const int Closeness_ = 1200;
 const int WaitTime_ = 3 * ApplicationConstants::Second_;
 
+/*
+	Default constructor
+*/
 SwipeGesture::SwipeGesture() {
 	this->m_head = nullptr;
 	this->m_current = this->m_head;
 	this->DepthData = new USHORT[ApplicationConstants::DepthWidth_ * ApplicationConstants::DepthHeight_];
 }
 
+/*
+	Constructor specifying number of nodes and yOffset in screen.
+
+	@param numNodes specifies how many squares to use horizontally across the screen.
+	@param yoffset specifies the upper y coordinate of each of those nodes
+*/
 void SwipeGesture::SetNodes(int numNodes, int yOffset) {
 	SwipeNode* curr = this->m_head;
 	for (int nodeIndex = numNodes - 1; nodeIndex >= 0; nodeIndex--) {
 		SwipeNode* newNode = new SwipeNode;
 		newNode->w = ApplicationConstants::DepthWidth_ / numNodes;
-		newNode->h = ApplicationConstants::DepthHeight_ * PercentOfScreen_;
+		newNode->h = (int) ApplicationConstants::DepthHeight_ * PercentOfScreen_;
 		newNode->x = newNode->w * nodeIndex;
 		newNode->y = yOffset;
 		newNode->elapsed = 0;
@@ -26,9 +35,31 @@ void SwipeGesture::SetNodes(int numNodes, int yOffset) {
 	}
 }
 
+/*
+	Default destructor.
+*/
+SwipeGesture::~SwipeGesture() {
+	SwipeNode* curr = this->m_head;
+	while (this->m_head) {
+		curr = this->m_head->next;
+		delete this->m_head;
+		this->m_head = nullptr;
+		this->m_head = curr;
+		curr = this->m_head;
+	}
+}
+
+/*
+	Updates the current state of the swipe feature. A "swipe" as it is
+	defined here moves from the leftmost node to the rightmost node, and
+	must be in order, within a certain time interval for the swipe to
+	be accepted.
+
+	@return whether or not all nodes have been swiped.
+*/
 bool SwipeGesture::Update() {
 	if (this->m_current) {
-		this->m_current->elapsed += ApplicationConstants::OptimalTime_;
+		this->m_current->elapsed += (unsigned int)ApplicationConstants::OptimalTime_;
 		// Return if we didn't update in time
 		if (this->m_current->elapsed > WaitTime_) {
 			this->m_current->elapsed = 0;

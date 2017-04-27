@@ -22,9 +22,10 @@ struct SwipeNode {
 class SwipeGesture {
 public:
 	SwipeGesture();
+	~SwipeGesture();
 	void SetNodes(int numNodes, int yOffset = DefaultOffset_);
 	bool Update();
-	USHORT* DepthData;
+	USHORT* DepthData;		// DEpth data of the Kinect sensor
 private:
 	SwipeNode* m_head;		// Starting node
 	SwipeNode* m_current;	// Node being updated
