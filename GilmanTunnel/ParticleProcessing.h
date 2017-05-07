@@ -5,10 +5,22 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <iostream>
+#include <vector>
 
 using namespace cv;
+using namespace std;
 
-const ushort LowestDepth_ = 2000;
+const ushort LowestDepth_ = 1250;
+int* depthIndices;
+byte* intermediateSrc;
+
+void InitializeParticleProcessing(int w = ApplicationConstants::DepthWidth_, int h = ApplicationConstants::DepthHeight_) {
+	intermediateSrc = new byte[w * h * 4];
+	depthIndices = new int[w * h * 4];
+	for (int i = 0; i < w * h * 4; i++) {
+		depthIndices[i] = ceil(i / 4);
+	}
+}
 
 void ProcessRGBData(byte* src, ushort* depth, byte* dest, int w, int h) {
 	if (!src || !depth || !dest)
@@ -21,57 +33,90 @@ void ProcessRGBData(byte* src, ushort* depth, byte* dest, int w, int h) {
 	cvtColor(matrixImageRGBA, matrixImage, CV_RGBA2RGB);
 
 	// Filter RGB values at depth less than LowestDepth_
-	for (int i = 0; i < ApplicationConstants::DepthWidth_ * ApplicationConstants::DepthHeight_ * 4; i++) {
-		src[i] = depth[i / 4] <= LowestDepth_ && depth[i / 4] > 0 ? src[i] : 0;
+	for (int i = 0; i < w * h * 4; i++) {
+		intermediateSrc[i] = depth[depthIndices[i]] <= LowestDepth_ && depth[depthIndices[i]] > 0 ? 255 : 0;
 	}
 
 	// Copy src data
 	Mat matrixData(w, h, CV_8UC4);
-	memcpy(matrixData.data, src, w * h * 4);
+	memcpy(matrixData.data, intermediateSrc, w * h * 4);
 
-	// Gray-scale src data
-	Mat matrixDataGray(w, h, CV_8UC4);
+	// Convert to binary image
+	Mat matrixDataGray(w, h, CV_8UC1);
 	cvtColor(matrixData, matrixDataGray, CV_RGBA2GRAY);
-	Mat matrixThreshold;
-	threshold(matrixDataGray, matrixThreshold, 0, 255, THRESH_BINARY_INV + THRESH_OTSU);
+	Mat matrixBinary;
+	threshold(matrixDataGray, matrixBinary, 40, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
 
-	// Remove noise
-	Mat kernel;
-	kernel = Mat::ones(Size(3, 3), CV_8U);
-	Mat matrixMorph;
-	morphologyEx(matrixThreshold, matrixMorph, MORPH_OPEN, kernel, Point(0, 0), 2);
+	// Find contours
+	vector<Mat> contours;
+	vector<Vec4i> hierarchy;
+	std::cout << "Finding contours" << std::endl;
+	findContours(matrixBinary, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_SIMPLE);
 
-	// Background area
-	Mat matrixBackground;
-	dilate(matrixMorph, matrixBackground, kernel, Point(0, 0), 3);
+	if (contours.empty()) {
+		return;
+	}
 
-	// Foreground area
-	Mat matrixDistanceTransform, matrixForeground;
-	distanceTransform(matrixMorph, matrixDistanceTransform, DIST_L2, 5);
-	double min, max;
-	minMaxLoc(matrixDistanceTransform, &min, &max);
-	threshold(matrixDistanceTransform, matrixForeground, 0.7*max, 255, 0);
-	Mat matrixForeground8U;
-	matrixForeground.convertTo(matrixForeground8U, CV_8U);
+	if (hierarchy.empty()) {
+		return;
+	}
 
-	// Markers and set final image
-	Mat markers;
-	connectedComponents(matrixForeground8U, markers, 8, CV_32S);
-	markers = markers + 1;
-	watershed(matrixImage, markers);
-	for (int i = 0; i < ApplicationConstants::DepthWidth_ * ApplicationConstants::DepthHeight_ * 3; i+=3) {
-		if (markers.data[i / 3] == -1) {
-			matrixImage.data[i] = 255;
-			matrixImage.data[i + 1] = 0;
-			matrixImage.data[i + 2] = 0;
+	// Create markers
+	Mat markers = Mat::zeros(matrixBinary.size(), CV_32S);
+
+	// Draw foreground markers
+	int idx = 0;
+	int compCount = 0;
+	std::cout << "Drawing contours" << std::endl;
+	for (; idx >= 0; idx = hierarchy[idx][0], compCount++) {
+		drawContours(markers, contours, idx, Scalar::all(compCount + 1), -1, 8, hierarchy, INT_MAX);
+	}
+
+	if (compCount == 0) {
+		return;
+	}
+
+	circle(markers, Point(5, 5), 3, CV_RGB(255, 255, 255), -1);
+
+	std::cout << "Getting Colors" << std::endl;
+
+	vector<Vec4b> colorTab;
+	for (int i = 0; i < compCount; i++)
+	{
+		int b = theRNG().uniform(0, 255);
+		int g = theRNG().uniform(0, 255);
+		int r = theRNG().uniform(0, 255);
+		int a = 255;
+		colorTab.push_back(Vec4b((uchar)b, (uchar)g, (uchar)r, (uchar) a));
+	}
+
+
+	std::cout << "Creating image" << std::endl;
+	// Create the final image
+	Mat dst = Mat::zeros(markers.size(), CV_8UC4);
+	// Fill labeled objects with random colors
+	for (int i = 0; i < markers.rows; i++)
+	{
+		for (int j = 0; j < markers.cols; j++)
+		{
+			int index = markers.at<int>(i, j);
+			if (index > 0 && index <= static_cast<int>(contours.size()))
+				dst.at<Vec4b>(i, j) = colorTab[index];
+			else
+				dst.at<Vec4b>(i, j) = Vec4b(0, 0, 0, 0);
 		}
 	}
 
-	Mat matrixDest;
-	cvtColor(matrixImage, matrixDest, CV_RGB2RGBA);
-
+	std::cout << "Copying" << std::endl;
 	// Copy data to destination array
-	if (matrixDest.isContinuous()) {
-		memcpy(dest, matrixDest.data, w * h  * 4);
+	if (dst.isContinuous()) {
+		memcpy(dest, dst.data, w * h * 4);
 	}
+
+}
+
+void CleanParticleProcessing() {
+	delete intermediateSrc;
+	if (depthIndices)
+		delete depthIndices;
 }

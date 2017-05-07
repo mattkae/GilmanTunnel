@@ -109,6 +109,8 @@ Application::~Application()
 		this->m_window->Free();
 		delete this->m_window;
 	}
+	// Free particle processing memory
+	CleanParticleProcessing();
 	SDL_Quit();
 }
 
@@ -181,6 +183,7 @@ bool Application::initializeKinect()
 			std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to open depth stream: Error code " << hr << std::endl;
 			return false;
 		}
+		InitializeParticleProcessing();
 		break;
 	case ApplicationState_RGB:
 		hr = this->m_sensor->NuiImageStreamOpen(
@@ -362,6 +365,7 @@ void Application::updateRGBStream(GLubyte* dest, int width, int height) {
 	}
 	texture->UnlockRect(0);
 	this->m_sensor->NuiImageStreamReleaseFrame(this->m_rgbStream, &imageFrame);
+	return;
 }
 
 /*
@@ -388,7 +392,7 @@ CrossedState Application::updateGalleryData(USHORT* dest) {
 		int index = 0;
 		while (curr < dataEnd) {
 			int x = index % ApplicationConstants::DepthWidth_;
-			int y = floor(index / ApplicationConstants::DepthHeight_);
+			int y = floor((double)index / ApplicationConstants::DepthHeight_);
 			// Get depth in millimeters
 			USHORT depth = NuiDepthPixelToDepth(*curr);
 			if (x > ApplicationConstants::DepthWidth_ / 4.f && x < ApplicationConstants::DepthWidth_ * (3.f / 4.f)) {

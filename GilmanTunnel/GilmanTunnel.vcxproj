@@ -87,7 +87,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(KINECTSDK10_DIR)inc;C:\SDL2\include;C:\glew\include;C:\Program Files\Microsoft SDKs\Kinect\v1.8\inc;C:\soil\src\;C:\dirent\include\;C:\opencv\build\include</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>$(KINECTSDK10_DIR);C:\SDL2\;C:\glew;C:\Program Files\Microsoft SDKs\Kinect\v1.8\;C:\soil\</AdditionalUsingDirectories>
@@ -95,8 +95,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(KINECTSDK10_DIR)lib/x86;C:\SDL2\lib\x86;C:\Program Files\Microsoft SDKs\Kinect\v1.8\lib\x86;C:\glew\lib\Release\Win32;C:\soil\lib;C:\opencv32\lib\Release</AdditionalLibraryDirectories>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);Kinect10.lib;SDL2.lib;opengl32.lib;glew32s.lib;SOIL.lib;opencv_core320.lib;opencv_imgproc320.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(KINECTSDK10_DIR)lib/x86;C:\SDL2\lib\x86;C:\Program Files\Microsoft SDKs\Kinect\v1.8\lib\x86;C:\glew\lib\Release\Win32;C:\soil\lib;C:\opencv32\lib\Debug</AdditionalLibraryDirectories>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);Kinect10.lib;SDL2.lib;opengl32.lib;glew32s.lib;SOIL.lib;opencv_core320d.lib;opencv_imgproc320d.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -121,12 +121,16 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(KINECTSDK10_DIR)inc;C:\SDL2\include;C:\glew\include;C:\Program Files\Microsoft SDKs\Kinect\v1.8\inc;C:\soil\src\;C:\dirent\include\;C:\opencv\build\include</AdditionalIncludeDirectories>
+      <AdditionalUsingDirectories>$(KINECTSDK10_DIR);C:\SDL2\;C:\glew;C:\Program Files\Microsoft SDKs\Kinect\v1.8\;C:\soil\</AdditionalUsingDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(KINECTSDK10_DIR)lib/x86;C:\SDL2\lib\x86;C:\Program Files\Microsoft SDKs\Kinect\v1.8\lib\x86;C:\glew\lib\Release\Win32;C:\soil\lib;C:\opencv32\lib\Release</AdditionalLibraryDirectories>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);Kinect10.lib;SDL2.lib;opengl32.lib;glew32s.lib;SOIL.lib;opencv_core320.lib;opencv_core320.lib;opencv_imgproc320.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
