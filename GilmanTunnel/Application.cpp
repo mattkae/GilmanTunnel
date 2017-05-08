@@ -271,7 +271,8 @@ void Application::Run()
 			case ApplicationState_Particle:
 				this->updateRGBStream(this->m_particleSrcTexture->data, ApplicationConstants::DepthWidth_, ApplicationConstants::DepthHeight_);
 				this->updateDepthData(this->m_depthData);
-				ProcessRGBData(this->m_particleSrcTexture->data, this->m_depthData, this->m_particleDestTexture->data, ApplicationConstants::DepthWidth_, ApplicationConstants::DepthHeight_);
+				if (SDL_GetTicks() > 5000)
+					ProcessRGBData(this->m_particleSrcTexture->data, this->m_depthData, this->m_particleDestTexture->data, ApplicationConstants::DepthWidth_, ApplicationConstants::DepthHeight_);
 			default:
 				break;
 			}
@@ -362,6 +363,7 @@ void Application::updateRGBStream(GLubyte* dest, int width, int height) {
 		while (curr < dataEnd) {
 			*dest++ = *curr++;
 		}
+		*dest++ = 0xff;
 	}
 	texture->UnlockRect(0);
 	this->m_sensor->NuiImageStreamReleaseFrame(this->m_rgbStream, &imageFrame);
@@ -402,8 +404,7 @@ CrossedState Application::updateGalleryData(USHORT* dest) {
 					}
 				}
 			}
-			*dest++ = depth;
-			*curr++;
+			*dest++ = *curr++;
 			index++;
 		}
 	}
@@ -432,9 +433,8 @@ void Application::updateDepthData(USHORT* dest) {
 
 		while (curr < dataEnd) {
 			// Get depth in millimeters
-			USHORT depth = NuiDepthPixelToDepth(*curr);
+			USHORT depth = NuiDepthPixelToDepth(*curr++);
 			*dest++ = depth;
-			*curr++;
 		}
 	}
 	texture->UnlockRect(0);
