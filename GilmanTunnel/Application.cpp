@@ -62,7 +62,9 @@ Application::Application(unsigned int width, unsigned int height)
 
 	// Initialize textures
 	this->m_gallery = new Gallery(); // for gallery mode
-	this->m_rgbTexture = new KinectTexture(width * height * 4, width, height); // for rgb streaming mode
+	this->m_rgbTexture = new KinectTexture(ApplicationConstants::DepthWidth_ * ApplicationConstants::DepthHeight_ * 4,
+		ApplicationConstants::DepthWidth_,
+		ApplicationConstants::DepthHeight_); // for rgb streaming mode
 	this->m_depthTexture = new KinectTexture(	ApplicationConstants::DepthWidth_ * ApplicationConstants::DepthHeight_ * 4,
 												ApplicationConstants::DepthWidth_,
 												ApplicationConstants::DepthHeight_); // for depth streaming mode
@@ -156,6 +158,33 @@ bool Application::initializeKinect()
 		std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to initialize NUI" << endl;
 		return false;
 	}
+	// Initialize data collection
+	hr = this->m_sensor->NuiImageStreamOpen(
+		NUI_IMAGE_TYPE_COLOR,
+		NUI_IMAGE_RESOLUTION_640x480,
+		0,
+		2,
+		NULL,
+		&this->m_rgbStream
+	);
+	if (hr != S_OK) {
+		std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to open RGB stream: Error code " << hr << std::endl;
+		return false;
+	}
+	hr = this->m_sensor->NuiImageStreamOpen(
+		NUI_IMAGE_TYPE_DEPTH,
+		NUI_IMAGE_RESOLUTION_640x480,
+		0,
+		2,
+		NULL,
+		&this->m_depthStream
+	);
+	if (hr != S_OK) {
+		std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to open depth stream: Error code " << hr << std::endl;
+		return false;
+	}
+	InitializeParticleProcessing();
+	/*
 	// Choose data to collect
 	switch (this->m_state) {
 	case ApplicationState_Particle:
@@ -216,7 +245,7 @@ bool Application::initializeKinect()
 		break;
 	default:
 		break;
-	}
+	}*/
 	// Check status of sensor
 	hr = this->m_sensor->NuiStatus();
 	if (hr != S_OK) {
@@ -246,8 +275,17 @@ void Application::Run()
 		while (SDL_PollEvent(&e)) {
 			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)) {
 				this->m_running = false;
-			} else if (e.type == SDL_KEYUP && e.key.keysym.sym == SDLK_p) {
-				this->m_paused = !this->m_paused;
+			} else if (e.type == SDL_KEYUP) {
+				if (e.key.keysym.sym == SDLK_p)
+					this->m_paused = !this->m_paused;
+				else if (e.key.keysym.sym == SDLK_1)
+					this->m_state = ApplicationState_RGB;
+				else if (e.key.keysym.sym == SDLK_2)
+					this->m_state = ApplicationState_Depth;
+				else if (e.key.keysym.sym == SDLK_3)
+					this->m_state = ApplicationState_Gallery;
+				else if (e.key.keysym.sym == SDLK_4)
+					this->m_state = ApplicationState_Particle;
 			}
 		}
 		// Continue if paused
@@ -263,7 +301,7 @@ void Application::Run()
 				this->updateDepthStream(this->m_depthTexture->data);
 				break;
 			case ApplicationState_RGB:
-				this->updateRGBStream(this->m_rgbTexture->data);
+				this->updateRGBStream(this->m_rgbTexture->data, ApplicationConstants::DepthWidth_, ApplicationConstants::DepthHeight_);
 				break;
 			case ApplicationState_Gallery:
 				this->m_gallery->Update(this->updateGalleryData(this->m_gallery->GetData()));

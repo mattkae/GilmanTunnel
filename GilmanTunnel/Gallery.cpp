@@ -22,13 +22,13 @@ Gallery::Gallery() {
 void Gallery::LoadImages() {
 	DIR *dir;
 	struct dirent *ent;
-	if ((dir = opendir("assets/images/test/")) != NULL) {
+	if ((dir = opendir("assets/images/")) != NULL) {
 		/* print all the files and directories within directory */
 		while ((ent = readdir(dir)) != NULL) {
 			std::string name = ent->d_name;
 			if (!(name.compare(".") == 0 || name.compare("..") == 0)) {
 				Texture* texture = new Texture();
-				if (texture->LoadTexture((char*)("assets/images/test/" + name).c_str())) {
+				if (texture->LoadTexture((char*)("assets/images/" + name).c_str())) {
 					this->m_textures.push_back(texture);
 				} else {
 					delete texture;
@@ -70,7 +70,7 @@ void Gallery::Update(CrossedState state) {
 
 	if (m_isActive) {
 		// Update image if it exceeds projection time
-		if (this->m_elapsed >= ApplicationConstants::ProjectionTime_ || this->m_swipeGesture->Update()) {
+		if (this->m_elapsed >= ApplicationConstants::ProjectionTime_) {
 			this->m_textures.at(this->m_currentIndex)->Reset();
 			this->m_currentIndex = (this->m_currentIndex + 1) % this->m_textures.size();
 			this->m_elapsed = 0;

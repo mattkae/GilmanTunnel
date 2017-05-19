@@ -10,8 +10,8 @@
 using namespace cv;
 using namespace std;
 
-const ushort LowestDepth_ = 3000;
-const int MinimumArea_ = 1000;
+const ushort LowestDepth_ = 2500;
+const int MinimumArea_ = 1500;
 int* depthIndices;
 byte* intermediateSrc;
 
@@ -69,8 +69,8 @@ void ProcessRGBData(byte* src, ushort* depth, byte* dest, int w, int h) {
 		if (hierarchy[i][0] != -1 && contourArea(contours[i]) > MinimumArea_) {
 			Scalar colour((rand() & 255), (rand() & 255), (rand() & 255));
 			drawContours(markers, contours, i, colour);
-			rectangle(markers, boundRect[i].tl(), boundRect[i].br(), colour, 2, 8, 0);
-			//circle(markers, center[i], (int)radius[i], colour, 2, 8, 0);
+			//rectangle(markers, boundRect[i].tl(), boundRect[i].br(), colour, 2, 8, 0);
+			circle(markers, center[i], (int)radius[i], colour, -1, 8, 0);
 			rectangleCount++;
 		}
 	}
@@ -80,7 +80,7 @@ void ProcessRGBData(byte* src, ushort* depth, byte* dest, int w, int h) {
 	Mat dst(w, h, CV_8UC4);
 	cvtColor(markers, dst, CV_RGB2RGBA);
 
-	//matrixImageRGBA = dst * 0.5 + matrixImageRGBA * 0.5;
+	dst = dst * 0.5 + matrixImageRGBA * 0.5;
 
 	// Copy data to destination array
 	if (dst.isContinuous()) {
