@@ -139,11 +139,13 @@ bool Application::initializeKinect()
 		std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to retrieve sensor count" << endl;
 		return false;
 	}
+
 	// Check number of sensors
 	if (numSensors == 0) {
 		std::cerr << "ERROR::INITIALIZE_KINECT:: No sensors available" << endl;
 		return false;
 	}
+
 	// Create a new sensor
 	hr = NuiCreateSensorByIndex(0, &this->m_sensor);
 	if (hr != S_OK) {
@@ -152,12 +154,14 @@ bool Application::initializeKinect()
 	} else {
 		std::cout << "SUCCESS:: Successfully loaded Kinect sensor" << endl;
 	}
+
 	// Initialize new sensor
 	hr = this->m_sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH | NUI_INITIALIZE_FLAG_USES_COLOR);
 	if (hr != S_OK) {
 		std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to initialize NUI" << endl;
 		return false;
 	}
+
 	// Initialize data collection
 	hr = this->m_sensor->NuiImageStreamOpen(
 		NUI_IMAGE_TYPE_COLOR,
@@ -184,68 +188,7 @@ bool Application::initializeKinect()
 		return false;
 	}
 	InitializeParticleProcessing();
-	/*
-	// Choose data to collect
-	switch (this->m_state) {
-	case ApplicationState_Particle:
-		hr = this->m_sensor->NuiImageStreamOpen(
-			NUI_IMAGE_TYPE_COLOR,
-			NUI_IMAGE_RESOLUTION_640x480,
-			0,
-			2,
-			NULL,
-			&this->m_rgbStream
-		);
-		if (hr != S_OK) {
-			std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to open RGB stream: Error code " << hr << std::endl;
-			return false;
-		}
-		hr = this->m_sensor->NuiImageStreamOpen(
-			NUI_IMAGE_TYPE_DEPTH,
-			NUI_IMAGE_RESOLUTION_640x480,
-			0,
-			2,
-			NULL,
-			&this->m_depthStream
-		);
-		if (hr != S_OK) {
-			std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to open depth stream: Error code " << hr << std::endl;
-			return false;
-		}
-		InitializeParticleProcessing();
-		break;
-	case ApplicationState_RGB:
-		hr = this->m_sensor->NuiImageStreamOpen(
-			NUI_IMAGE_TYPE_COLOR,
-			NUI_IMAGE_RESOLUTION_1280x960,
-			0,
-			2,
-			NULL,
-			&this->m_rgbStream
-		);
-		if (hr != S_OK) {
-			std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to open RGB stream: Error code " << hr << std::endl;
-			return false;
-		}
-		break;
-	case ApplicationState_Depth:
-	case ApplicationState_Gallery:
-		hr = this->m_sensor->NuiImageStreamOpen(
-			NUI_IMAGE_TYPE_DEPTH,
-			NUI_IMAGE_RESOLUTION_640x480,
-			0,
-			2,
-			NULL,
-			&this->m_depthStream
-		);
-		if (hr != S_OK) {
-			std::cerr << "ERROR::INITIALIZE_KINECT:: Unable to open depth stream: Error code " << hr << std::endl;
-			return false;
-		}
-		break;
-	default:
-		break;
-	}*/
+
 	// Check status of sensor
 	hr = this->m_sensor->NuiStatus();
 	if (hr != S_OK) {
@@ -271,6 +214,7 @@ void Application::Run()
 		elapsed = currentTime - lastTime;
 		lastTime = currentTime;
 		lag += elapsed;
+
 		// Poll input
 		while (SDL_PollEvent(&e)) {
 			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)) {
@@ -288,11 +232,13 @@ void Application::Run()
 					this->m_state = ApplicationState_Particle;
 			}
 		}
+
 		// Continue if paused
 		if (this->m_paused) {
 			lag = 0;
 			continue;
 		}
+
 		// Run updates
 		while (lag >= ApplicationConstants::OptimalTime_) {
 			// Run Updates
@@ -316,6 +262,7 @@ void Application::Run()
 			}
 			lag -= (Uint32) ApplicationConstants::OptimalTime_;
 		}
+
 		// Render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		switch (this->m_state) {

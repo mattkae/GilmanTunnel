@@ -12,17 +12,24 @@ using namespace std;
 
 const ushort LowestDepth_ = 2500;
 const int MinimumArea_ = 1500;
-int* depthIndices;
 byte* intermediateSrc;
 
+/*
+	Allocate the memory necessary for "Particle Highway."
+*/
 void InitializeParticleProcessing(int w = ApplicationConstants::DepthWidth_, int h = ApplicationConstants::DepthHeight_) {
 	intermediateSrc = new byte[w * h];
-	depthIndices = new int[w * h * 4];
-	for (int i = 0; i < w * h * 4; i++) {
-		depthIndices[i] = ceil(i / 4);
-	}
 }
 
+/*
+	Process the data for Particle Highway.
+
+	@param src Kinect's RGB data stream
+	@param depth Kinect's depth stream
+	@param dest where the new image is written to
+	@param w the width of the data array
+	@param h the height of the data array
+*/
 void ProcessRGBData(byte* src, ushort* depth, byte* dest, int w, int h) {
 	if (!src || !depth || !dest)
 		return;
@@ -89,8 +96,9 @@ void ProcessRGBData(byte* src, ushort* depth, byte* dest, int w, int h) {
 
 }
 
+/*
+	Deallocate memory.
+*/
 void CleanParticleProcessing() {
 	delete intermediateSrc;
-	if (depthIndices)
-		delete depthIndices;
 }

@@ -5,9 +5,14 @@
 #include <dirent.h>
 #include <iostream>
 
+// Number of nodes to swipe.
 const int DefaultNodes_ = 16;
 
-Gallery::Gallery() {
+/*
+	Default constructor for the gallery.
+*/
+Gallery::Gallery()
+{
 	this->m_isActive = false;
 	this->m_isEnding = false;
 	this->m_currentIndex = 0;
@@ -18,8 +23,12 @@ Gallery::Gallery() {
 	this->m_swipeGesture->SetNodes(DefaultNodes_);
 }
 
-
-void Gallery::LoadImages() {
+/*
+	Loads every image from the "assets/images" directory into the
+	gallery as a new texture.
+*/
+void Gallery::LoadImages()
+{
 	DIR *dir;
 	struct dirent *ent;
 	if ((dir = opendir("assets/images/")) != NULL) {
@@ -41,13 +50,23 @@ void Gallery::LoadImages() {
 	}
 }
 
-Gallery::~Gallery() {
+/*
+	Deallocate memory for the gallery.
+*/
+Gallery::~Gallery()
+{
 	for (auto it = this->m_textures.begin(); it !=  this->m_textures.end(); ++it) {
 		delete *it;
 	}
 }
 
-void Gallery::Update(CrossedState state) {
+/*
+	Update the currently shown image in the gallery if someone is in front of the Kinect.
+
+	@param state the current state of the depth data.
+*/
+void Gallery::Update(CrossedState state) 
+{
 	this->m_current = state;
 
 	bool before = this->m_isActive; // Store before state
@@ -90,15 +109,25 @@ void Gallery::Update(CrossedState state) {
 		this->m_before = this->m_current;
 }
 
+/*
+	Render the currently active texture.
 
-void Gallery::Render(unsigned int elapsed) {
+	@param elapsed time elapsed since last render
+*/
+void Gallery::Render(unsigned int elapsed)
+{
 	if (this->m_isActive || this->m_isEnding) {
 		this->m_textures.at(this->m_currentIndex)->Render(elapsed);
 		this->m_elapsed += elapsed;
 	}
 }
 
+/*
+	Returns the swipe gesture's data.
 
-USHORT* Gallery::GetData() {
+	@return swipe gesture data.
+*/
+USHORT* Gallery::GetData() 
+{
 	return this->m_swipeGesture->DepthData;
 }

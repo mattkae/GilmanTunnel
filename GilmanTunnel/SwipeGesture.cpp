@@ -9,7 +9,8 @@ const int WaitTime_ = 3 * ApplicationConstants::Second_;
 /*
 	Default constructor
 */
-SwipeGesture::SwipeGesture() {
+SwipeGesture::SwipeGesture()
+{
 	this->m_head = nullptr;
 	this->m_current = this->m_head;
 	this->DepthData = new USHORT[ApplicationConstants::DepthWidth_ * ApplicationConstants::DepthHeight_];
@@ -21,7 +22,8 @@ SwipeGesture::SwipeGesture() {
 	@param numNodes specifies how many squares to use horizontally across the screen.
 	@param yoffset specifies the upper y coordinate of each of those nodes
 */
-void SwipeGesture::SetNodes(int numNodes, int yOffset) {
+void SwipeGesture::SetNodes(int numNodes, int yOffset) 
+{
 	SwipeNode* curr = this->m_head;
 	for (int nodeIndex = numNodes - 1; nodeIndex >= 0; nodeIndex--) {
 		SwipeNode* newNode = new SwipeNode;
@@ -38,7 +40,8 @@ void SwipeGesture::SetNodes(int numNodes, int yOffset) {
 /*
 	Default destructor.
 */
-SwipeGesture::~SwipeGesture() {
+SwipeGesture::~SwipeGesture()
+{
 	SwipeNode* curr = this->m_head;
 	while (this->m_head) {
 		curr = this->m_head->next;
@@ -57,7 +60,8 @@ SwipeGesture::~SwipeGesture() {
 
 	@return whether or not all nodes have been swiped.
 */
-bool SwipeGesture::Update() {
+bool SwipeGesture::Update() 
+{
 	if (this->m_current) {
 		this->m_current->elapsed += (unsigned int)ApplicationConstants::OptimalTime_;
 		// Return if we didn't update in time

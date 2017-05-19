@@ -3,6 +3,14 @@
 #include "Shader.h"
 #include <iostream>
 
+/*
+	Load the Kienct texture given the size of the data, the width
+	of the screen, and the height of the screen.
+
+	@param size array size for RGBA data
+	@param width width of screen
+	@param height height of screen
+*/
 KinectTexture::KinectTexture(int size, int width, int height) 
 {
 	// Allocate data
@@ -57,15 +65,22 @@ KinectTexture::KinectTexture(int size, int width, int height)
 }
 
 
+/*
+	Deallocator.
+*/
 KinectTexture::~KinectTexture()
 {
 	delete this->data;
 }
 
+/*
+	Render the Kinect's data across the whole screen.
 
-
+	@param elapsed - void, unused in this context
+*/
 void KinectTexture::Render(unsigned int elapsed) 
 {
+	(void)elapsed;
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	m_shader->Use();
